@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "static",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "const fs=require('fs'),path=require('path');require('http').createServer((q,s)=>{let p=decodeURIComponent(q.url.split('?')[0]);if(p==='/')p='/index.html';try{const d=fs.readFileSync(path.join(process.cwd(),p));const ext=p.split('.').pop();const mt={html:'text/html; charset=utf-8',js:'text/javascript',css:'text/css',jpg:'image/jpeg',png:'image/png',json:'application/json'}[ext]||'application/octet-stream';s.writeHead(200,{'Content-Type':mt});s.end(d)}catch(e){s.writeHead(404);s.end('not found')}}).listen(8731)"
+      ],
+      "port": 8731
+    }
+  ]
+}

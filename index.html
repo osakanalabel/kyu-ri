@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#7ccf6e">
+<title>そだてて！きゅうりくん</title>
+<style>
+:root{
+  --green:#2ecb1e;
+  --green-dark:#1ea512;
+  --leaf:#2e9e2e;
+  --ink:#222;
+  --soil:#8d6e4a;
+  --card:#ffffff;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:"Hiragino Maru Gothic ProN","BIZ UDGothic","Yu Gothic UI",system-ui,sans-serif;
+  background:linear-gradient(#cfeebc,#a8dd95);
+  color:var(--ink);
+  touch-action:manipulation;
+  user-select:none;
+  -webkit-user-select:none;
+}
+#app{max-width:440px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+.scr{display:none;flex-direction:column;flex:1;padding:10px;padding-bottom:max(10px,env(safe-area-inset-bottom));}
+.scr.on{display:flex;}
+button{
+  font-family:inherit;border:none;border-radius:14px;cursor:pointer;
+  background:#fff;color:var(--ink);box-shadow:0 3px 0 rgba(0,0,0,.18);
+}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.18);}
+button:disabled{opacity:.4;}
+
+/* ===== title ===== */
+#scr-title{align-items:center;justify-content:center;gap:14px;text-align:center;}
+.logo{
+  font-size:34px;font-weight:900;line-height:1.25;margin:0;
+  color:#157f0c;text-shadow:2px 2px 0 #fff;
+  letter-spacing:.05em;
+}
+.logo small{font-size:16px;display:block;color:#4a7a3a;}
+#title-chars{display:flex;gap:6px;align-items:flex-end;height:150px;}
+#title-chars .ch{animation:bob 1.6s ease-in-out infinite;}
+#title-chars .ch:nth-child(2){animation-delay:.8s;transform:scaleX(-1);}
+@keyframes bob{0%,100%{transform:translateY(0) var(--flip,scale(1));}50%{transform:translateY(-10px) var(--flip,scale(1));}}
+#title-chars .ch:nth-child(2){--flip:scaleX(-1);}
+.menu-btn{
+  width:270px;padding:13px;font-size:18px;font-weight:700;
+  background:#fff;white-space:nowrap;
+}
+.menu-btn.primary{background:#ffb83d;color:#5b3600;font-size:20px;}
+#btn-sound{position:fixed;top:10px;right:10px;width:44px;height:44px;font-size:20px;border-radius:50%;}
+
+/* ===== game ===== */
+#g-top{
+  display:flex;align-items:center;gap:8px;background:#fffd;border-radius:12px;
+  padding:6px 10px;font-weight:800;font-size:15px;margin-bottom:6px;
+}
+#g-day{color:#157f0c;}
+#g-stage{flex:1;text-align:center;font-size:13px;color:#555;}
+#g-warn{font-size:11px;color:#d32f2f;font-weight:800;}
+#btn-quit{width:30px;height:30px;border-radius:50%;font-size:14px;background:#eee;flex:none;box-shadow:none;}
+#scene-wrap{position:relative;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+#scene{display:block;width:100%;}
+#scene-wrap.flash::after{
+  content:"";position:absolute;inset:0;background:#fff;
+  animation:flash .5s ease-out forwards;pointer-events:none;
+}
+@keyframes flash{0%{opacity:1}100%{opacity:0}}
+
+#bars{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;background:#fffd;border-radius:12px;padding:7px 10px;margin:6px 0;}
+.bar-row{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;}
+.bar-row .lbl{width:64px;flex:none;font-size:10px;white-space:nowrap;}
+.bar-track{flex:1;height:11px;background:#e0e0e0;border-radius:6px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:6px;transition:width .4s;}
+.bar-fill.water{background:#42a5f5;}
+.bar-fill.nutri{background:#ffa726;}
+.bar-fill.hp{background:#66bb6a;}
+.bar-fill.hp.low{background:#ef5350;}
+.bar-fill.love{background:#ec6aa0;}
+
+#msgbox{
+  background:#fff;border-radius:14px;padding:12px 14px;min-height:72px;
+  font-size:15px;font-weight:700;line-height:1.5;position:relative;
+  box-shadow:0 2px 6px rgba(0,0,0,.12);
+}
+#msgnext{position:absolute;right:12px;bottom:6px;font-size:13px;color:#888;animation:blink 1s infinite;display:none;}
+@keyframes blink{50%{opacity:0}}
+#msgbox.waiting #msgnext{display:block;}
+
+#harvest-row{margin-top:8px;display:none;}
+#harvest-row.show{display:block;}
+#btn-harvest{
+  width:100%;padding:13px;font-size:19px;font-weight:900;border-radius:14px;
+  background:linear-gradient(#ffd54f,#ffb300);color:#5b3600;
+  animation:pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+
+#cmds{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px;}
+.cmd{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  padding:7px 2px;min-height:56px;border-radius:12px;background:#fff;
+}
+.cmd .ce{font-size:20px;line-height:1;}
+.cmd .cl{font-size:10px;font-weight:800;}
+.cmd.attention{background:#ffecb3;animation:pulse 1s infinite;}
+.cmd.used{background:#e8f5e9;}
+#cmds.busy .cmd{opacity:.35;pointer-events:none;}
+
+/* ===== result ===== */
+#scr-result{align-items:center;justify-content:center;gap:10px;text-align:center;}
+.dish-card{
+  background:#fff;border-radius:20px;padding:18px 22px;width:100%;max-width:360px;
+  box-shadow:0 4px 14px rgba(0,0,0,.18);
+}
+.dish-emoji{font-size:62px;line-height:1.2;}
+.dish-name{font-size:21px;font-weight:900;margin:6px 0 2px;color:#157f0c;}
+.dish-stars{color:#ffa000;font-size:15px;letter-spacing:2px;}
+.dish-desc{font-size:13px;color:#666;margin-top:6px;line-height:1.5;}
+.res-stats{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap;}
+.res-stat{background:#f1f8e9;border-radius:12px;padding:8px 12px;min-width:88px;}
+.res-stat .k{font-size:11px;color:#777;font-weight:700;}
+.res-stat .v{font-size:19px;font-weight:900;color:#33691e;}
+.res-score{margin-top:10px;font-size:15px;font-weight:800;}
+.res-score b{font-size:30px;color:#e65100;}
+#result-char{height:130px;}
+#result-char .ch{animation:dance .9s ease-in-out infinite;}
+@keyframes dance{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
+#scr-result.bad{background:linear-gradient(#9e9e9e,#616161);border-radius:0;}
+#scr-result.bad .dish-name{color:#555;}
+#bad-title{font-size:26px;font-weight:900;color:#fff;text-shadow:1px 2px 0 #0006;margin:0;display:none;}
+#scr-result.bad #bad-title{display:block;}
+.note{font-size:12px;color:#33691e;font-weight:700;}
+#scr-result.bad .note{color:#eee;}
+
+/* ===== list screens ===== */
+.list-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.list-head h2{flex:1;margin:0;font-size:19px;color:#157f0c;text-shadow:1px 1px 0 #fff;}
+.back-btn{padding:8px 14px;font-weight:800;font-size:14px;}
+#history-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;}
+.h-item{
+  background:#fff;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;
+  font-size:13px;font-weight:700;
+}
+.h-item .he{font-size:24px;}
+.h-item .hmain{flex:1;}
+.h-item .hsub{font-size:11px;color:#888;font-weight:600;}
+.h-item .hscore{font-weight:900;color:#e65100;}
+.h-item.bad .hscore{color:#999;}
+.empty{padding:30px;text-align:center;color:#6a8a5a;font-weight:700;}
+
+#dex-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;overflow-y:auto;}
+.dex-cell{
+  background:#fff;border-radius:10px;padding:7px 3px;text-align:center;min-height:62px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+}
+.dex-cell .de{font-size:21px;}
+.dex-cell .dn{font-size:9px;font-weight:700;line-height:1.25;}
+.dex-cell.unknown{opacity:.5;}
+.dex-cell.unknown .de{filter:grayscale(1);}
+
+/* ===== modal ===== */
+#modal{
+  position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;
+  padding:18px;z-index:50;
+}
+#modal.on{display:flex;}
+#modal-card{
+  background:#fff;border-radius:18px;padding:18px;max-width:380px;width:100%;
+  max-height:80dvh;overflow-y:auto;font-size:14px;line-height:1.7;
+}
+#modal-card h3{margin:0 0 8px;color:#157f0c;}
+#modal-card .log-line{font-size:12px;border-bottom:1px dashed #ddd;padding:3px 0;font-weight:600;}
+#modal-close{display:block;margin:14px auto 0;padding:9px 26px;font-weight:800;background:#a5d6a7;}
+
+/* ===== svg anims ===== */
+.sway{transform-box:fill-box;transform-origin:50% 100%;animation:sway 3.2s ease-in-out infinite;}
+@keyframes sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+.fruit-sway{transform-box:fill-box;transform-origin:50% 0%;animation:fsway 2.6s ease-in-out infinite;}
+@keyframes fsway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+.rain-g{animation:rainfall .45s linear infinite;}
+@keyframes rainfall{from{transform:translateY(-20px)}to{transform:translateY(20px)}}
+.sun-rays{transform-box:fill-box;transform-origin:center;animation:spin 14s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cloud-g{animation:drift 9s ease-in-out infinite alternate;}
+@keyframes drift{from{transform:translateX(-8px)}to{transform:translateX(8px)}}
+.crow-g{animation:bob 1.4s ease-in-out infinite;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== タイトル ===== -->
+  <section id="scr-title" class="scr on">
+    <h1 class="logo">そだてて！<br>きゅうりくん<small>〜たねから しょくたくまで〜</small></h1>
+    <div id="title-chars"></div>
+    <button class="menu-btn primary" id="btn-start">🌱 はじめる</button>
+    <button class="menu-btn" id="btn-history">📖 そだてたきろく</button>
+    <button class="menu-btn" id="btn-dex">🍽️ りょうりずかん</button>
+    <button class="menu-btn" id="btn-howto">❓ あそびかた</button>
+  </section>
+  <button id="btn-sound">🔊</button>
+
+  <!-- ===== ゲーム ===== -->
+  <section id="scr-game" class="scr">
+    <header id="g-top">
+      <span id="g-day">1日目</span>
+      <span id="g-weather">☀️はれ</span>
+      <span id="g-stage">たね</span>
+      <span id="g-warn"></span>
+      <button id="btn-quit">✕</button>
+    </header>
+    <div id="scene-wrap"><svg id="scene" viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div id="bars">
+      <div class="bar-row"><span class="lbl">💧水分</span><div class="bar-track"><div class="bar-fill water" id="bar-water"></div></div></div>
+      <div class="bar-row"><span class="lbl">🌱えいよう</span><div class="bar-track"><div class="bar-fill nutri" id="bar-nutri"></div></div></div>
+      <div class="bar-row"><span class="lbl">😊元気</span><div class="bar-track"><div class="bar-fill hp" id="bar-hp"></div></div></div>
+      <div class="bar-row"><span class="lbl">💖あいじょう</span><div class="bar-track"><div class="bar-fill love" id="bar-love"></div></div></div>
+    </div>
+    <div id="msgbox"><span id="msgtext"></span><span id="msgnext">▼</span></div>
+    <div id="harvest-row"><button id="btn-harvest">🥒 しゅうかくする！</button></div>
+    <div id="cmds"></div>
+  </section>
+
+  <!-- ===== けっか ===== -->
+  <section id="scr-result" class="scr">
+    <h2 id="bad-title"></h2>
+    <div id="result-char"></div>
+    <div class="dish-card" id="dish-card">
+      <div class="dish-emoji" id="r-emoji"></div>
+      <div class="dish-name" id="r-name"></div>
+      <div class="dish-stars" id="r-stars"></div>
+      <div class="dish-desc" id="r-desc"></div>
+      <div class="res-stats">
+        <div class="res-stat"><div class="k">ながさ</div><div class="v" id="r-len"></div></div>
+        <div class="res-stat"><div class="k">おもさ</div><div class="v" id="r-wt"></div></div>
+        <div class="res-stat"><div class="k">そだてた日</div><div class="v" id="r-days"></div></div>
+      </div>
+      <div class="res-score">そうごうとくてん <b id="r-score"></b> 点</div>
+    </div>
+    <div class="note">📖 きろくにほぞんしたよ！</div>
+    <button class="menu-btn primary" id="btn-retry">🌱 もういちど そだてる</button>
+    <button class="menu-btn" id="btn-totitle">🏠 タイトルへ</button>
+  </section>
+
+  <!-- ===== きろく ===== -->
+  <section id="scr-history" class="scr">
+    <div class="list-head">
+      <h2>📖 そだてたきろく</h2>
+      <button class="back-btn" data-back>もどる</button>
+    </div>
+    <div id="history-list"></div>
+  </section>
+
+  <!-- ===== ずかん ===== -->
+  <section id="scr-dex" class="scr">
+    <div class="list-head">
+      <h2 id="dex-title">🍽️ りょうりずかん</h2>
+      <button class="back-btn" data-back>もどる</button>
+    </div>
+    <div id="dex-grid"></div>
+  </section>
+
+</div>
+
+<div id="modal"><div id="modal-card"><div id="modal-body"></div><button id="modal-close">とじる</button></div></div>
+
+<script>
+"use strict";
+/* =========================================================
+   そだてて！きゅうりくん — 完全オフライン きゅうり育成ゲーム
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const R = (n) => Math.random()*n;
+const RI = (n) => Math.floor(Math.random()*n);
+const pick = a => a[RI(a.length)];
+const clamp = (v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+
+/* ---------- サウンド (WebAudio・通信なし) ---------- */
+let AC=null, mute = false;
+try{ mute = localStorage.getItem('kyuri_mute')==='1'; }catch(e){}
+function beep(freq=660,dur=.06,type='square',vol=.12,delay=0){
+  if(mute) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    const o=AC.createOscillator(), g=AC.createGain();
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol,AC.currentTime+delay);
+    g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+delay+dur);
+    o.connect(g).connect(AC.destination);
+    o.start(AC.currentTime+delay); o.stop(AC.currentTime+delay+dur+.02);
+  }catch(e){}
+}
+const sTap   = ()=>beep(700,.05);
+const sGood  = ()=>{beep(660,.08,'triangle',.14);beep(880,.1,'triangle',.14,.09);};
+const sBad   = ()=>{beep(220,.18,'sawtooth',.1);beep(160,.25,'sawtooth',.1,.12);};
+const sFanfa = ()=>{[523,659,784,1047].forEach((f,i)=>beep(f,.14,'triangle',.15,i*.13));};
+function updateSoundBtn(){ $('#btn-sound').textContent = mute?'🔇':'🔊'; }
+$('#btn-sound').onclick = ()=>{ mute=!mute; try{localStorage.setItem('kyuri_mute',mute?'1':'0');}catch(e){} updateSoundBtn(); sTap(); };
+updateSoundBtn();
+
+/* ---------- ストレージ ---------- */
+function loadJSON(k,def){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return def; } }
+function saveJSON(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+
+/* ---------- キャラクターSVG（原案画像をベクター再現） ---------- */
+function charSVG(o={}){
+  const girl = !!o.girl;
+  const mood = o.mood||'happy';   // happy / sad / dead
+  const body = o.body || (mood==='dead' ? '#b8a36a' : '#2ecb1e');
+  const streak = mood==='dead' ? '#8d7b4d' : '#54b04a';
+  const ink = '#141414';
+  const h = o.h||120;
+  let eye, mouth;
+  if(mood==='dead'){
+    eye = `<g stroke="${ink}" stroke-width="3.2" stroke-linecap="round">
+      <line x1="50" y1="27" x2="60" y2="38"/><line x1="60" y1="27" x2="50" y2="38"/></g>`;
+    mouth = `<path d="M41,50 Q51,46 61,50" stroke="${ink}" stroke-width="3.6" fill="none" stroke-linecap="round"/>`;
+  }else if(mood==='sad'){
+    eye = `<ellipse cx="55" cy="33" rx="4.4" ry="6.2" fill="${ink}"/>
+      <path d="M48,42 q3,4 6,5" stroke="#7fc4e8" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+    mouth = `<path d="M41,52 Q51,44 62,52" stroke="${ink}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+  }else{
+    eye = `<ellipse cx="55" cy="33" rx="4.6" ry="6.6" fill="${ink}"/>`;
+    mouth = `<path d="M39,45 Q51,56 63,45" stroke="${ink}" stroke-width="4.4" fill="none" stroke-linecap="round"/>`;
+  }
+  const lashes = (girl && mood!=='dead')
+    ? `<g stroke="${ink}" stroke-width="2.6" stroke-linecap="round">
+        <line x1="51" y1="28" x2="46" y2="22"/>
+        <line x1="55" y1="26" x2="55" y2="19"/>
+        <line x1="59" y1="28" x2="64" y2="22"/></g>` : '';
+  const bow = girl
+    ? `<g fill="#f0144b">
+        <path d="M36,14 L24,8 Q20,6.5 21,11 L24,19 Q25,22 29,20 Z"/>
+        <path d="M37,13 L33,1 Q31.5,-3 28,0 L25,7 Q24,10 28,11 Z"/>
+        <circle cx="35" cy="13" r="4.4"/></g>` : '';
+  return `<svg viewBox="0 0 100 122" xmlns="http://www.w3.org/2000/svg" style="height:${h}px" class="ch">
+    <g stroke="${ink}" stroke-width="3.4" stroke-linecap="round">
+      <line x1="29" y1="53" x2="13" y2="62"/><line x1="13" y1="62" x2="5"  y2="58"/>
+      <line x1="13" y1="62" x2="7"  y2="66"/><line x1="13" y1="62" x2="12" y2="70"/>
+      <line x1="70" y1="48" x2="86" y2="58"/><line x1="86" y1="58" x2="94" y2="54"/>
+      <line x1="86" y1="58" x2="95" y2="61"/><line x1="86" y1="58" x2="89" y2="67"/>
+      <line x1="42" y1="91" x2="38" y2="105"/><line x1="38" y1="105" x2="30" y2="111"/>
+      <line x1="38" y1="105" x2="37" y2="114"/><line x1="38" y1="105" x2="44" y2="112"/>
+      <line x1="59" y1="91" x2="63" y2="105"/><line x1="63" y1="105" x2="56" y2="113"/>
+      <line x1="63" y1="105" x2="63" y2="115"/><line x1="63" y1="105" x2="70" y2="111"/>
+    </g>
+    <path fill="${body}" d="M47,10 C36,12 28,26 27,44 C26,62 27,76 33,84 C39,92 53,94 63,91 C71,88 75,79 74,71 C73,63 68,59 67,51 C66,43 68,37 66,29 C63,16 55,8 47,10 Z"/>
+    <g stroke="${streak}" stroke-width="2.2" stroke-linecap="round" fill="none" opacity=".75">
+      <path d="M44,26 q-4,12 -2,22"/>
+      <path d="M52,58 q-2,10 1,18"/>
+      <path d="M59,72 q5,4 9,4"/>
+      <path d="M49,14 q3,4 4,8"/>
+    </g>
+    ${eye}${lashes}${mouth}${bow}
+  </svg>`;
+}
+
+/* ---------- 料理データ（そだてかたで決まる） ---------- */
+/* s: {len,wt,hp,love,weird,yellow,bent,fell,struck,days,talk,song,waterCnt,
+       weirdCnt,pestsBeaten,supportUsed,netUsed,survivedTyphoon,hotDays,rainDays} */
+const DISHES = [
+ // ---- でんせつ級 (p9) ----
+ {id:'legend', n:'でんせつの一本づけ', e:'🥒✨', r:5, p:9, d:'かんぺきに そだったきゅうりだけが なれる、おうさまのつけもの。',
+   c:s=>!s.yellow&&!s.bent&&s.len>=20&&s.len<=27&&s.love>=75&&s.hp>=90&&s.weird<10},
+ {id:'dragon', n:'ドラゴンきゅうりのまるやき', e:'🐉', r:5, p:9, d:'りゅうのように大きい！ たべおわるのに 3日かかるらしい。',
+   c:s=>s.len>=45},
+ {id:'space', n:'うちゅうきゅうりグラタン', e:'🛸', r:5, p:9, d:'かみなりのパワーで うちゅうのあじがする。たまに ひかる。',
+   c:s=>s.struck&&s.weird>=40},
+ {id:'golden', n:'おうごんきゅうりのてんぷら', e:'👑', r:5, p:9, d:'かんじゅくした黄色いきゅうりは、まるで金のかたまり！',
+   c:s=>s.yellow&&s.love>=65&&s.hp>=75},
+ // ---- とくべつ (p7) ----
+ {id:'thunder', n:'かみなりのピリピリづけ', e:'⚡', r:4, p:7, d:'たべると したが ピリピリ！ かみなりが おちたきゅうり。',
+   c:s=>s.struck},
+ {id:'zombie', n:'ゾンビきゅうりサラダ', e:'🧟', r:4, p:7, d:'よなかに さらの上で うごくらしい…。たべるゆうきは ある？',
+   c:s=>s.weird>=60&&s.hp<=45},
+ {id:'sennen', n:'1000年づけ', e:'🏺', r:4, p:7, d:'おちて はっこうして、いっきに1000年もののあじに。くさい！',
+   c:s=>s.fell&&s.weird>=25},
+ {id:'nanika', n:'はっこうしすぎたナニカ', e:'🫧', r:3, p:7, d:'もう きゅうりかどうかも わからない。あわが 出ている…。',
+   c:s=>s.fell},
+ {id:'fairy', n:'ようせいサイズのピクルス', e:'🧚', r:4, p:7, d:'小さいけれど あいじょうたっぷり。ようせいの おべんとうに。',
+   c:s=>s.len<=11&&s.love>=40},
+ {id:'hitokuchi', n:'ひとくちきゅうり', e:'🍬', r:2, p:7, d:'パクッと ひとくちで おしまい。みじかくても おいしいよ。',
+   c:s=>s.len<=11},
+ {id:'heart', n:'ハートもりもりサラダ', e:'💖', r:4, p:7, d:'あいじょうが あふれて、きゅうりが ハートがたに ならんだ！',
+   c:s=>s.love>=85},
+ {id:'boat', n:'ジャンボきゅうりのサラダぶね', e:'🚢', r:4, p:7, d:'大きなきゅうりを ふねにして、サラダを のせた ごうかな一品。',
+   c:s=>s.len>=36},
+ {id:'snake', n:'へびへびサラダ', e:'🐍', r:3, p:7, d:'にょろにょろ まがった きゅうりが、へびにしか 見えない。',
+   c:s=>s.bent&&s.len>=28},
+ {id:'boomerang', n:'ブーメランきゅうりいため', e:'🪃', r:3, p:7, d:'なげたら もどってきそうな カーブ。いためると おいしい。',
+   c:s=>s.bent},
+ {id:'energy', n:'キュウリXエナジードリンク', e:'🔋', r:4, p:7, d:'のんだら 24じかん ねむれない みどりのドリンク。子どもは まね しないでね。',
+   c:s=>s.weird>=45&&s.wt>=150},
+ {id:'gdrink', n:'なぞのみどりドリンク', e:'🥤', r:3, p:7, d:'なにが 入っているかは ひみつ。あじも ひみつ。',
+   c:s=>s.weird>=45},
+ {id:'kurokoge', n:'まっくろこげきゅうりのくんせい', e:'🌑', r:3, p:7, d:'ぎりぎりまで がんばった きゅうりの、おとなのあじ。にがい。',
+   c:s=>s.hp<=25},
+ {id:'ycurry', n:'黄色きゅうりのカレー', e:'🍛', r:3, p:7, d:'かんじゅくきゅうりで作る、あまくて ふしぎなカレー。',
+   c:s=>s.yellow&&s.weird>=15},
+ {id:'jam', n:'かんじゅくきゅうりジャム', e:'🍯', r:3, p:7, d:'まちにまった かんじゅくのあまみ。パンに ぬってどうぞ。',
+   c:s=>s.yellow&&s.love>=40},
+ {id:'smoothie', n:'きいろスムージー', e:'🧃', r:2, p:7, d:'とりすぎて 黄色くなっちゃった。でも スムージーなら セーフ！',
+   c:s=>s.yellow},
+ {id:'tsun', n:'ツンとした あさづけ', e:'🧊', r:2, p:7, d:'あまり かまってもらえなかったので、すこし ツンとしたあじ。',
+   c:s=>s.love<=8&&s.hp>=60},
+ {id:'lonely', n:'さみしがりやの おつけもの', e:'💧', r:2, p:7, d:'もっと はなしかけて ほしかったなあ…と いうあじがする。',
+   c:s=>s.love<=8},
+ {id:'cocktail', n:'おしゃれきゅうりソーダ', e:'🍹', r:4, p:7, d:'ていねいに そだてた きゅうりだけが なれる、キラキラのソーダ。',
+   c:s=>s.supportUsed&&s.netUsed&&s.hp>=85&&s.love>=40},
+ {id:'burger', n:'メガきゅうりバーガー', e:'🍔', r:3, p:7, d:'パンより きゅうりのほうが あつい。口が あかない。',
+   c:s=>s.wt>=260},
+ {id:'muscle', n:'マッスルきゅうりステーキ', e:'💪', r:3, p:7, d:'きたえぬかれた きゅうりは、ステーキになっても まけない。',
+   c:s=>s.hp>=95&&s.wt>=180},
+ // ---- おもしろ・テーマ (p5) ----
+ {id:'soft', n:'きゅうりソフトクリーム', e:'🍦', r:3, p:5, d:'みどりいろの ソフトクリーム。まっちゃでは ない。',
+   c:s=>s.love>=60&&s.weird>=10},
+ {id:'parfait', n:'きゅうりパフェ', e:'🍨', r:3, p:5, d:'てっぺんに きゅうりが ささった ゆめのパフェ。',
+   c:s=>s.love>=70&&s.weird>=12},
+ {id:'cake', n:'きゅうりバースデーケーキ', e:'🎂', r:3, p:5, d:'たくさん おはなしした きゅうりの、おいわいのケーキ。',
+   c:s=>s.talk>=6},
+ {id:'pudding', n:'きゅうりプリン', e:'🍮', r:3, p:5, d:'プルプルなのに きゅうりのあじ。のうが こんらんする。',
+   c:s=>s.love>=55&&s.weird>=18},
+ {id:'ramen', n:'きゅうりラーメン', e:'🍜', r:2, p:5, d:'めんも スープも きゅうり。つめたくて 夏にぴったり？',
+   c:s=>s.weird>=20},
+ {id:'curry', n:'きゅうりカレー', e:'🍛', r:2, p:5, d:'カレーに きゅうり！？ …いがいと いけるらしい。',
+   c:s=>s.weird>=14},
+ {id:'pizza', n:'きゅうりピザ', e:'🍕', r:2, p:5, d:'チーズの上に きゅうりが ずらり。イタリア人も びっくり。',
+   c:s=>s.weird>=10&&s.love>=30},
+ {id:'takoyaki', n:'きゅうり入りたこやき', e:'🐙', r:2, p:5, d:'タコのかわりに きゅうり。コロコロ あつあつ。',
+   c:s=>s.weird>=8},
+ {id:'kakigori', n:'きゅうりかきごおり', e:'🍧', r:2, p:5, d:'もうしょを のりこえた きゅうりの、ひんやりデザート。',
+   c:s=>s.hotDays>=3},
+ {id:'juice', n:'フレッシュきゅうりジュース', e:'🥛', r:2, p:5, d:'水をたっぷり のんで そだったから、みずみずしさ100点！',
+   c:s=>s.waterCnt>=9},
+ {id:'icecandy', n:'きゅうりアイスキャンディー', e:'🧊', r:2, p:5, d:'あつい日に かじりたい、みどりのアイス。',
+   c:s=>s.hotDays>=2},
+ {id:'miso', n:'きゅうりのおみそしる', e:'🍲', r:2, p:5, d:'なぞのこなの ふしぎなちからで、なぜか みそと あう。',
+   c:s=>s.weirdCnt>=1},
+ {id:'marine', n:'うたごえマリネ', e:'🎤', r:3, p:5, d:'うたを きいて そだった きゅうりは、ゆかいなあじがする。',
+   c:s=>s.song>=3},
+ {id:'rainpickle', n:'あめふりピクルス', e:'☔', r:2, p:5, d:'雨の日が おおかったぶん、しっとり やさしいあじ。',
+   c:s=>s.rainDays>=5},
+ {id:'typhoon', n:'台風にまけないサラダ', e:'🌀', r:3, p:5, d:'台風を のりこえた きゅうりは、つよくて しゃきしゃき！',
+   c:s=>s.survivedTyphoon},
+ {id:'bugmaster', n:'虫とり名人のいためもの', e:'🐛', r:3, p:5, d:'虫から まもりぬいた きれいなきゅうりの ごちそう。',
+   c:s=>s.pestsBeaten>=2},
+ // ---- ふつう (p3) ----
+ {id:'ippon', n:'おまつりの一本づけ', e:'🏮', r:2, p:3, d:'おまつりの やたいで 大にんき！ ぼうに さして がぶり。',
+   c:s=>s.len>=18&&s.len<=32&&s.hp>=60},
+ {id:'marukajiri', n:'ひやしきゅうり まるかじり', e:'🥒', r:2, p:3, d:'つめたく ひやして そのまま がぶり。夏のあじ。',
+   c:s=>s.len>=24&&s.hp>=70},
+ {id:'kappa', n:'かっぱまき', e:'🍣', r:2, p:3, d:'かっぱも だいすき、きゅうりの おすしまき。',
+   c:s=>s.love>=30},
+ {id:'morokyu', n:'もろきゅう', e:'🥢', r:2, p:3, d:'みそを つけて たべる、王どうの一品。へんなものは あげなかった！',
+   c:s=>s.weirdCnt===0},
+ {id:'sandwich', n:'きゅうりサンドイッチ', e:'🥪', r:2, p:3, d:'うすぎりきゅうりの 上品なサンド。ピクニックに どうぞ。',
+   c:s=>s.love>=45},
+ {id:'hiyashichuka', n:'ひやしちゅうかのトッピング', e:'🍝', r:2, p:3, d:'ほそく きった きゅうりが、ひやしちゅうかの主やく。',
+   c:s=>s.hotDays>=1},
+ {id:'banbanji', n:'バンバンジーのおとも', e:'🐔', r:2, p:3, d:'ずっしり そだった きゅうりは、おにくにも まけない。',
+   c:s=>s.wt>=140},
+ {id:'tataki', n:'たたききゅうり', e:'🔨', r:1, p:3, d:'たたいて われめを 入れると あじが しみこむ。',
+   c:s=>s.hp>=75},
+ // ---- いつでも (p1) ----
+ {id:'pickles', n:'コロコロピクルス', e:'🫙', r:1, p:1, d:'びんに つめた すっぱい おやつ。', c:()=>true},
+ {id:'asazuke', n:'しおもみあさづけ', e:'🧂', r:1, p:1, d:'しおで もむだけ。シンプル いず ベスト。', c:()=>true},
+ {id:'sunomono', n:'たこときゅうりの すのもの', e:'🦑', r:1, p:1, d:'さっぱり すっぱい、おばあちゃんのあじ。', c:()=>true},
+ {id:'salad', n:'シャキシャキサラダ', e:'🥗', r:1, p:1, d:'とれたて きゅうりの きほんのサラダ。', c:()=>true},
+ {id:'potesara', n:'ポテトサラダのきゅうり', e:'🥔', r:1, p:1, d:'ポテサラの中で いちばん いいしごとを するやつ。', c:()=>true},
+ {id:'stick', n:'きゅうりスティック', e:'🥕', r:1, p:1, d:'ポリポリ とまらない。マヨネーズを そえて。', c:()=>true},
+];
+
+/* ---------- 天気 ---------- */
+const WX = {
+  sunny:{name:'はれ',   icon:'☀️', dry:16},
+  cloudy:{name:'くもり', icon:'☁️', dry:8},
+  rain:{name:'雨',      icon:'🌧️', dry:-22},
+  heavy:{name:'大雨',   icon:'⛈️', dry:-35},
+  hot:{name:'もうしょ', icon:'🔥', dry:30},
+  typhoon:{name:'台風', icon:'🌀', dry:-30},
+};
+function rollWeather(st){
+  if(st.forecastTyphoon){ st.forecastTyphoon=false; return 'typhoon'; }
+  const r=Math.random();
+  if(r<.34) return 'sunny';
+  if(r<.56) return 'cloudy';
+  if(r<.74) return 'rain';
+  if(r<.88) return 'hot';
+  return 'heavy';
+}
+
+/* ---------- ステージ ---------- */
+const STAGES = ['たね','めが出た','なえ','つるが ぐんぐん','花が さいた','きゅうりが なった！'];
+const STAGE_TH = [12,30,55,85,110]; // growth がこえたら次へ
+
+/* ---------- ゲーム状態 ---------- */
+let st = null;
+let busy = false;
+
+function newState(){
+  return {
+    day:1, stage:0, growth:0,
+    water:65, nutri:55, hp:100, love:10, weird:0,
+    weather:'sunny', forecastTyphoon:false,
+    girl: Math.random()<.5,
+    pest:null, pestDays:0, disease:false,
+    support:false, net:false, crow:false,
+    fruitDays:0, yellowDays:0, len:0, wt:0,
+    yellow:false, bent:false, fell:false, struck:false,
+    rootrotDays:0,
+    talk:0, song:0, waterCnt:0, weirdCnt:0, pestsBeaten:0,
+    survivedTyphoon:false, hotDays:0, rainDays:0,
+    dead:false, deadCause:'',
+    log:[],
+  };
+}
+const charName = ()=> st.girl?'きゅうりちゃん':'きゅうりくん';
+
+/* ---------- メッセージ ---------- */
+let msgResolve=null, msgTimer=null;
+function showMsg(text, ms=1300){
+  return new Promise(res=>{
+    msgResolve=res;
+    const box=$('#msgbox');
+    $('#msgtext').textContent=text;
+    box.classList.add('waiting');
+    clearTimeout(msgTimer);
+    msgTimer=setTimeout(finishMsg, ms);
+  });
+}
+function finishMsg(){
+  clearTimeout(msgTimer);
+  $('#msgbox').classList.remove('waiting');
+  if(msgResolve){ const r=msgResolve; msgResolve=null; r(); }
+}
+$('#msgbox').addEventListener('click', ()=>{ if(msgResolve){ sTap(); finishMsg(); } });
+async function say(...lines){ for(const l of lines){ await showMsg(l); } }
+function setPrompt(text){ $('#msgtext').textContent=text; $('#msgbox').classList.remove('waiting'); }
+
+/* ---------- シーン描画 ---------- */
+function skyColor(w){
+  return {sunny:'#aee7ff',cloudy:'#c5d2d8',rain:'#8fa6b3',heavy:'#6b8290',hot:'#bfe3ff',typhoon:'#4f626e'}[w];
+}
+function leaf(x,y,rx,ry,rot){
+  return `<g transform="translate(${x},${y}) rotate(${rot})">
+    <ellipse rx="${rx}" ry="${ry}" fill="#2e9e2e" stroke="#1f7a1f" stroke-width="1"/>
+    <line x1="0" y1="${ry*0.6}" x2="0" y2="${-ry*0.6}" stroke="#1f7a1f" stroke-width="1"/></g>`;
+}
+function flower(x,y,sc=1){
+  let petals='';
+  for(let i=0;i<5;i++){ petals+=`<ellipse rx="4.5" ry="2.6" fill="#ffd83d" transform="rotate(${i*72}) translate(5,0)"/>`; }
+  return `<g transform="translate(${x},${y}) scale(${sc})">${petals}<circle r="2.4" fill="#ff9d00"/></g>`;
+}
+function tendril(x,y,sc=1,flip=1){
+  return `<path d="M${x},${y} q ${6*flip*sc},-6 ${10*flip*sc},-2 q ${3*flip*sc},3 ${-1*flip*sc},5 q ${-3*flip*sc},1 ${-3*flip*sc},-2"
+    fill="none" stroke="#2e9e2e" stroke-width="1.6" stroke-linecap="round"/>`;
+}
+function fruitFace(h, dead){
+  const ink='#141414';
+  if(dead) return `<g stroke="${ink}" stroke-width="2" stroke-linecap="round">
+    <line x1="-4" y1="${h*.22}" x2="2" y2="${h*.32}"/><line x1="2" y1="${h*.22}" x2="-4" y2="${h*.32}"/></g>
+    <path d="M-5,${h*.45} Q0,${h*.41} 5,${h*.45}" stroke="${ink}" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+  let f=`<ellipse cx="-1" cy="${h*.26}" rx="2.6" ry="3.8" fill="${ink}"/>
+    <path d="M-6,${h*.4} Q0,${h*.47} 6,${h*.4}" stroke="${ink}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+  if(st && st.girl){
+    f+=`<g stroke="${ink}" stroke-width="1.4" stroke-linecap="round">
+      <line x1="-3" y1="${h*.23}" x2="-5.5" y2="${h*.19}"/><line x1="-1" y1="${h*.215}" x2="-1" y2="${h*.17}"/>
+      <line x1="1" y1="${h*.23}" x2="3.5" y2="${h*.19}"/></g>
+      <g fill="#f0144b" transform="translate(-7,${h*.1}) scale(.55)">
+        <path d="M0,0 L-9,-5 Q-12,-6 -11,-2 L-9,4 Q-8,7 -4,5 Z"/>
+        <path d="M1,-1 L-2,-10 Q-3,-13 -6,-11 L-8,-5 Q-9,-2 -5,-1 Z"/>
+        <circle r="3.2"/></g>`;
+  }
+  return f;
+}
+function fruitSVG(len, opt={}){
+  const h = clamp(26 + len*1.5, 30, 100);
+  const fill = opt.dead ? '#a89462' : (opt.yellow ? '#d8c93e' : '#2ecb1e');
+  const stk  = opt.dead ? '#8d7b4d' : (opt.yellow ? '#b3a52f' : '#54b04a');
+  const body = opt.bent
+    ? `M0,2 C-9,4 -12,${h*.34} -7,${h*.64} C-3,${h*.86} 6,${h*.98} 13,${h*.9} C18,${h*.84} 15,${h*.7} 10,${h*.58} C5,${h*.4} 8,8 0,2 Z`
+    : `M0,2 C-8,3 -10,${h*.3} -9.4,${h*.62} C-8.8,${h*.88} -5,${h} 0,${h} C5,${h} 8.8,${h*.88} 9.4,${h*.62} C10,${h*.3} 8,3 0,2 Z`;
+  return `<g class="${opt.dead?'':'fruit-sway'}">
+    <path d="M0,-6 q-2,4 0,8" stroke="#2e9e2e" stroke-width="2" fill="none"/>
+    <path d="${body}" fill="${fill}" stroke="${stk}" stroke-width="1.2"/>
+    <g stroke="${stk}" stroke-width="1.5" stroke-linecap="round" opacity=".8">
+      <path d="M-4,${h*.2} q-1.5,${h*.18} -.5,${h*.36}"/>
+      <path d="M4,${h*.3} q1.5,${h*.18} .5,${h*.36}"/>
+    </g>
+    ${flower(opt.bent?13:0, h+2, .7)}
+    ${fruitFace(h, opt.dead)}
+  </g>`;
+}
+function plantSVG(){
+  const dead = st.dead;
+  const stem = dead?'#9b7e4e':'#2e9e2e';
+  let g='';
+  const face = (x,y,sc)=>dead?'':`<g transform="translate(${x},${y}) scale(${sc})">
+      <ellipse cx="0" cy="0" rx="2.6" ry="3.6" fill="#141414"/>
+      <path d="M-5,6 Q0,10 5,6" stroke="#141414" stroke-width="2" fill="none" stroke-linecap="round"/></g>`;
+  if(st.stage===0){
+    g = `<ellipse cx="0" cy="2" rx="22" ry="8" fill="#7a5c3c"/>
+      <ellipse cx="0" cy="-2" rx="6" ry="4" fill="#f4e9c5" stroke="#cbb87e" stroke-width="1"/>
+      <g transform="translate(28,-18)">
+        <line x1="0" y1="0" x2="0" y2="20" stroke="#8d6e4a" stroke-width="3"/>
+        <rect x="-16" y="-14" width="32" height="16" rx="3" fill="#fff" stroke="#bbb"/>
+        <text x="0" y="-2" font-size="9" text-anchor="middle" fill="#555" font-weight="bold">たね</text></g>`;
+  }else if(st.stage===1){
+    g = `<g class="sway"><line x1="0" y1="0" x2="0" y2="-12" stroke="${stem}" stroke-width="2.5"/>
+      ${leaf(-7,-15,8,5,-30)}${leaf(7,-15,8,5,30)}${face(0,-24,0.8)}</g>`;
+  }else if(st.stage===2){
+    g = `<g class="sway"><path d="M0,0 C-2,-12 2,-22 0,-34" stroke="${stem}" stroke-width="3" fill="none"/>
+      ${leaf(-10,-16,10,6,-35)}${leaf(11,-24,10,6,35)}${leaf(-9,-32,9,6,-30)}
+      ${tendril(2,-30,1,1)}${face(2,-42,0.9)}</g>`;
+  }else{
+    // stage3+ : 大きなつる
+    const pole = st.support
+      ? `<line x1="26" y1="4" x2="26" y2="-104" stroke="#8d6e4a" stroke-width="5" stroke-linecap="round"/>
+         <line x1="6" y1="-84" x2="46" y2="-84" stroke="#8d6e4a" stroke-width="4" stroke-linecap="round"/>` : '';
+    let vine = `<path d="M0,0 C-8,-20 10,-34 2,-58 C-4,-74 8,-86 14,-96" stroke="${stem}" stroke-width="3.4" fill="none"/>
+      ${leaf(-12,-22,12,8,-35)}${leaf(13,-34,12,8,35)}${leaf(-10,-52,12,8,-30)}${leaf(14,-66,11,7,38)}${leaf(-4,-84,11,7,-25)}
+      ${tendril(8,-46,1.1,1)}${tendril(-6,-70,1,-1)}`;
+    if(st.stage===4){ vine += flower(16,-58,1)+flower(-8,-90,1)+face(10,-100,1); }
+    if(st.stage>=5){
+      vine += flower(-8,-90,.8);
+      vine += `<g transform="translate(18,-62)">${fruitSVG(st.len,{yellow:st.yellow,bent:st.bent,dead})}</g>`;
+    }
+    if(st.stage===3){ vine += face(14,-104,1); }
+    g = pole + `<g class="${dead?'':'sway'}">${vine}</g>`;
+  }
+  if(dead){ g = `<g transform="rotate(14)" opacity=".85">${g}</g>`; }
+  return `<g transform="translate(178,158)">${g}</g>`;
+}
+function weatherSVG(w){
+  let s='';
+  if(w==='sunny'||w==='hot'){
+    const r = w==='hot'?22:17;
+    let rays='';
+    for(let i=0;i<8;i++){ rays+=`<line x1="${r+5}" y1="0" x2="${r+12}" y2="0" transform="rotate(${i*45})" stroke="#ffb300" stroke-width="3" stroke-linecap="round"/>`; }
+    s+=`<g transform="translate(300,42)"><g class="sun-rays">${rays}</g><circle r="${r}" fill="${w==='hot'?'#ff8f00':'#ffd54f'}"/></g>`;
+    if(w==='hot') s+=`<text x="300" y="86" font-size="13" text-anchor="middle">🥵</text>`;
+  }
+  if(w==='cloudy'||w==='rain'||w==='heavy'||w==='typhoon'){
+    const cFill = (w==='cloudy')?'#f5f5f5':(w==='typhoon'?'#37474f':'#78909c');
+    s+=`<g class="cloud-g"><g fill="${cFill}" stroke="#0002">
+      <ellipse cx="80" cy="36" rx="34" ry="16"/><ellipse cx="108" cy="30" rx="26" ry="14"/>
+      <ellipse cx="250" cy="50" rx="38" ry="17"/><ellipse cx="280" cy="44" rx="26" ry="13"/></g></g>`;
+  }
+  if(w==='rain'||w==='heavy'||w==='typhoon'){
+    const n = w==='rain'?14:26;
+    const slant = w==='typhoon'?-14:-4;
+    let drops='';
+    for(let i=0;i<n;i++){
+      const x=10+R(340), y=R(140);
+      drops+=`<line x1="${x}" y1="${y}" x2="${x+slant*.3}" y2="${y+12}" stroke="#bbdefb" stroke-width="2" stroke-linecap="round" opacity=".8"/>`;
+    }
+    s+=`<g class="rain-g">${drops}</g>`;
+  }
+  if(w==='typhoon'){
+    s+=`<g transform="translate(180,60)" opacity=".7">
+      <path d="M0,0 q20,-4 22,14 q2,16 -14,18 q-12,1 -13,-9 q-1,-8 7,-9 q6,-1 7,4" fill="none" stroke="#cfd8dc" stroke-width="4" stroke-linecap="round" class="sun-rays"/></g>`;
+  }
+  return s;
+}
+function renderScene(){
+  const w = st.weather;
+  let s = `<rect width="360" height="160" fill="${skyColor(w)}"/>`;
+  s += weatherSVG(w);
+  // 地面
+  s += `<rect y="150" width="360" height="80" fill="#8d6e4a"/>
+    <path d="M0,150 q90,-8 180,0 t180,0 v12 q-90,8 -180,0 t-180,0 Z" fill="#7a5c3c"/>
+    <g fill="#6d4f33"><ellipse cx="60" cy="195" rx="40" ry="6"/><ellipse cx="180" cy="205" rx="46" ry="6"/><ellipse cx="300" cy="192" rx="40" ry="6"/></g>
+    <g fill="#5da14f"><path d="M20,150 q2,-10 4,0 q2,-8 4,0 Z"/><path d="M330,150 q2,-10 4,0 q2,-8 4,0 Z"/><path d="M120,150 q2,-9 4,0 q2,-7 4,0 Z"/></g>`;
+  // ネット
+  if(st.net){
+    let netl='';
+    for(let x=130;x<=230;x+=14) netl+=`<line x1="${x}" y1="38" x2="${x}" y2="158" stroke="#b0bec5" stroke-width="1.4"/>`;
+    for(let y=38;y<=158;y+=14) netl+=`<line x1="130" y1="${y}" x2="230" y2="${y}" stroke="#b0bec5" stroke-width="1.4"/>`;
+    s+=`<g opacity=".6">${netl}</g>`;
+  }
+  s += plantSVG();
+  // 害虫
+  if(st.pest){
+    s+=`<g transform="translate(160,108)">
+      <ellipse rx="5" ry="3.6" fill="${st.pest==='slug'?'#9e9d24':'#e65100'}"/>
+      <circle cx="-4" cy="-1" r="2.2" fill="#3e2723"/>
+      <g stroke="#3e2723" stroke-width="1"><line x1="-2" y1="3" x2="-3" y2="6"/><line x1="1" y1="3" x2="1" y2="6"/><line x1="4" y1="3" x2="5" y2="6"/></g>
+      <text x="2" y="-12" font-size="14" fill="#d32f2f" font-weight="bold">❗</text></g>
+      <g transform="translate(206,96)"><ellipse rx="4" ry="3" fill="#e65100"/><circle cx="3" cy="-1" r="1.8" fill="#3e2723"/></g>`;
+  }
+  // 病気
+  if(st.disease){
+    s+=`<g fill="#fff" opacity=".85"><circle cx="166" cy="120" r="4"/><circle cx="192" cy="104" r="5"/><circle cx="172" cy="92" r="3.5"/></g>
+      <text x="216" y="92" font-size="12" fill="#6a1b9a" font-weight="bold">びょうき…</text>`;
+  }
+  // カラス
+  if(st.crow){
+    s+=`<g class="crow-g" transform="translate(308,96)">
+      <ellipse rx="14" ry="10" fill="#263238"/><circle cx="10" cy="-6" r="7" fill="#263238"/>
+      <path d="M16,-7 l9,2 l-9,3 Z" fill="#ff8f00"/><circle cx="11" cy="-8" r="1.6" fill="#fff"/>
+      <path d="M-6,-2 q-8,-6 -4,-12" stroke="#263238" stroke-width="3" fill="none"/>
+      <line x1="-2" y1="9" x2="-2" y2="15" stroke="#ff8f00" stroke-width="2"/>
+      <line x1="3" y1="9" x2="3" y2="15" stroke="#ff8f00" stroke-width="2"/>
+      <text x="-6" y="-20" font-size="11" fill="#fff" font-weight="bold">ジー…</text></g>`;
+  }
+  $('#scene').innerHTML = s;
+}
+function renderBars(){
+  $('#bar-water').style.width = st.water+'%';
+  $('#bar-nutri').style.width = st.nutri+'%';
+  $('#bar-hp').style.width = st.hp+'%';
+  $('#bar-hp').classList.toggle('low', st.hp<=35);
+  $('#bar-love').style.width = clamp(st.love,0,100)+'%';
+}
+function renderTop(){
+  $('#g-day').textContent = st.day+'日目';
+  $('#g-weather').textContent = WX[st.weather].icon+WX[st.weather].name;
+  $('#g-stage').textContent = STAGES[st.stage];
+  $('#g-warn').textContent = st.forecastTyphoon?'⚠️台風がくるかも！':'';
+}
+function render(){
+  renderTop(); renderScene(); renderBars();
+  $('#harvest-row').classList.toggle('show', st.stage===5 && !st.dead && !busy);
+  renderCmds();
+}
+
+/* ---------- コマンド ---------- */
+const CMDS = [
+  {id:'water', e:'💧', l:'水やり'},
+  {id:'fert',  e:'🌱', l:'ひりょう'},
+  {id:'weird', e:'🧪', l:'なぞのこな'},
+  {id:'bug',   e:'🥢', l:'虫とり',  need:()=>!!st.pest},
+  {id:'med',   e:'💊', l:'くすり',  need:()=>st.pest||st.disease, always:true},
+  {id:'talk',  e:'💬', l:'はなす'},
+  {id:'song',  e:'🎵', l:'うたう'},
+  {id:'pole',  e:'🪵', l:'しちゅう', once:'support'},
+  {id:'net',   e:'🥅', l:'ネット',  once:'net'},
+  {id:'rest',  e:'😴', l:'みまもる'},
+];
+function renderCmds(){
+  const c=$('#cmds');
+  c.innerHTML = CMDS.map(cm=>{
+    const used = cm.once && st[cm.once];
+    const attention = !used && cm.need && cm.need();
+    const dis = used || (cm.id==='bug' && !st.pest) || (cm.id==='med' && !st.pest && !st.disease);
+    return `<button class="cmd ${attention?'attention':''} ${used?'used':''}" data-cmd="${cm.id}" ${dis?'disabled':''}>
+      <span class="ce">${used?'✅':cm.e}</span><span class="cl">${cm.l}</span></button>`;
+  }).join('');
+  c.classList.toggle('busy', busy);
+}
+$('#cmds').addEventListener('click', e=>{
+  const b=e.target.closest('.cmd');
+  if(!b || busy || b.disabled) return;
+  sTap();
+  doCommand(b.dataset.cmd);
+});
+$('#btn-harvest').addEventListener('click', ()=>{ if(!busy){ sTap(); doCommand('harvest'); } });
+
+function logLine(s_){ st.log.push(s_); }
+
+async function applyCmd(id){
+  const cm = CMDS.find(c=>c.id===id);
+  if(cm) logLine(`　▶ ${cm.l}`);
+  switch(id){
+    case 'water':
+      st.waterCnt++;
+      if(st.water>88){ st.water=100; st.hp-=6; await say('💦 水を あげすぎた！ 水たまりが できてる…'); }
+      else{ st.water=clamp(st.water+32,0,100); st.love+=1; sGood(); await say('💧 ごくごく… '+charName()+'は うれしそうだ！'); }
+      break;
+    case 'fert':
+      if(st.nutri>88){ st.nutri=100; st.hp-=8; await say('🌱 あげすぎて ひりょうやけ してしまった…！'); }
+      else{ st.nutri=clamp(st.nutri+32,0,100); sGood(); await say('🌱 ひりょうを まいた。土が げんきに なった！'); }
+      break;
+    case 'weird':
+      st.weirdCnt++; st.nutri=clamp(st.nutri+18,0,100); st.growth+=9; st.weird+=14;
+      if(Math.random()<.25){ st.hp-=8; await say('🧪 なぞのこなを まいた…','😵 '+charName()+'の ようすが ちょっと おかしい！？'); }
+      else{ await say('🧪 なぞのこなを まいた…','✨ なんだか ぐんぐん 大きくなってる…！'); }
+      break;
+    case 'bug':
+      st.pest=null; st.pestDays=0; st.pestsBeaten++; st.love+=3; sGood();
+      await say('🥢 えいっ！ 虫を ぜんぶ やっつけた！','😊 '+charName()+'は ほっとしている。');
+      break;
+    case 'med':
+      st.weird+=6; st.hp=clamp(st.hp+4,0,100);
+      if(st.pest){ st.pest=null; st.pestDays=0; st.pestsBeaten++; }
+      if(st.disease){ st.disease=false; }
+      sGood(); await say('💊 くすりを まいた。虫もびょうきも さようなら！');
+      break;
+    case 'talk':
+      st.talk++; st.love=clamp(st.love+9,0,100); st.growth+=1;
+      sGood();
+      await say('💬 「'+pick(st.girl
+        ?['リボン、にあってる？','あしたも きてくれる？','お花が さいたら 見にきてね！','きょうも ありがとう♪','大きくなったら なにに なるのかな？']
+        :['ぼく、おっきくなるよ！','おひさま だいすき！','水って おいしいなあ','きょうも あそんでくれて ありがとう！','はやく しょくたくに… いや なんでもない！'])+'」');
+      break;
+    case 'song':
+      st.song++;
+      if(Math.random()<.7){ st.love=clamp(st.love+13,0,100); sGood(); await say('🎵 ラララ〜♪ '+charName()+'は うっとり きいている…'); }
+      else{ st.love=clamp(st.love+2,0,100); sBad(); await say('🎵 ラララ〜♪ …あれ？ ちょっと 音が はずれた。'); }
+      break;
+    case 'pole':
+      st.support=true; sGood();
+      await say('🪵 しちゅうを 立てた！ これで 台風がきても あんしんだ。');
+      break;
+    case 'net':
+      st.net=true; sGood();
+      await say('🥅 ネットを はった！ もう カラスには ぬすまれない。');
+      break;
+    case 'rest':
+      st.hp=clamp(st.hp+6,0,100);
+      await say('😴 きょうは そっと みまもった。'+charName()+'は ゆっくり 休んでいる…');
+      break;
+  }
+  st.hp=clamp(st.hp,0,100); st.weird=clamp(st.weird,0,100);
+  render();
+}
+
+/* ---------- 朝：天気とイベント ---------- */
+async function morning(){
+  st.weather = rollWeather(st);
+  const w=WX[st.weather];
+  if(st.weather==='hot') st.hotDays++;
+  if(st.weather==='rain'||st.weather==='heavy') st.rainDays++;
+  logLine(`${st.day}日目 ${w.icon}${w.name}`);
+  render();
+  await say(`☀ ${st.day}日目の あさ。きょうの天気は ${w.icon}${w.name}。`);
+
+  if(st.weather==='typhoon'){
+    await say('🌀 台風が やってきた！！ かぜが ごうごう ふいている！');
+  }else if(st.weather==='hot'){
+    await say('🔥 きょうは もうしょ日…。土が からからに かわきそう。');
+  }
+
+  // イベント
+  await rollEvent();
+  setPrompt('どうする？ したのボタンから 1つ えらんでね。');
+}
+async function rollEvent(){
+  // 害虫がいるときは てんとうむしチャンス
+  if(st.pest && Math.random()<.18){
+    st.pest=null; st.pestDays=0; st.pestsBeaten++;
+    logLine('　🐞 テントウムシが助けてくれた');
+    sGood();
+    await say('🐞 テントウムシが とんできて、虫を たべてくれた！ ラッキー！');
+    render(); return;
+  }
+  if(st.pest || st.weather==='typhoon') return;
+  if(Math.random()>.5) return; // イベントなしの日
+
+  const stage=st.stage;
+  const table=[];
+  table.push({w:13, id:'aphid'});
+  if(stage>=2) table.push({w:9, id:'beetle'});
+  if(st.rainYesterday) table.push({w:12, id:'slug'});
+  if(stage>=2 && !st.disease) table.push({w:8, id:'powdery'});
+  if(stage===5 && !st.net && !st.crow) table.push({w:20, id:'crow'});
+  table.push({w:6, id:'cat'});
+  table.push({w:8, id:'worm'});
+  table.push({w:3, id:'quake'});
+  const total=table.reduce((a,b)=>a+b.w,0);
+  let r=R(total), ev=null;
+  for(const t of table){ r-=t.w; if(r<=0){ ev=t.id; break; } }
+  if(!ev) return;
+
+  switch(ev){
+    case 'aphid':
+      st.pest='aphid'; st.pestDays=0; logLine('　🐛 アブラムシ発生！'); sBad(); render();
+      await say('🐛 たいへん！ アブラムシが ついている！','はやく たいじしないと よわって しまうよ！');
+      break;
+    case 'beetle':
+      st.pest='beetle'; st.pestDays=0; logLine('　🪲 ウリハムシ発生！'); sBad(); render();
+      await say('🪲 ウリハムシが はっぱを むしゃむしゃ たべている！');
+      break;
+    case 'slug':
+      st.pest='slug'; st.pestDays=0; logLine('　🐌 ナメクジ発生！'); sBad(); render();
+      await say('🐌 雨あがりで ナメクジが やってきた…。ぬるぬるだ！');
+      break;
+    case 'powdery':
+      st.disease=true; logLine('　🍄 うどんこびょうに…'); sBad(); render();
+      await say('🍄 はっぱに 白いこなが…！ うどんこびょうだ！','くすりで なおしてあげよう。');
+      break;
+    case 'crow':
+      st.crow=true; logLine('　🐦‍⬛ カラスがねらっている！'); sBad(); render();
+      await say('🐦‍⬛ カラスが きゅうりを じーっと 見ている…！','ネットを はらないと もっていかれちゃう！');
+      break;
+    case 'cat':
+      st.hp=clamp(st.hp-3,0,100); st.love=clamp(st.love+2,0,100); logLine('　🐈 ネコがひるね');
+      await say('🐈 となりのネコが はたけで ひるねしている…。','ちょっと ふんづけられたけど、'+charName()+'は うれしそう。');
+      break;
+    case 'worm':
+      st.nutri=clamp(st.nutri+10,0,100); logLine('　🪱 ミミズが土をたがやした'); sGood();
+      await say('🪱 土から ミミズが ひょっこり。土が ふかふかに なった！');
+      break;
+    case 'quake':
+      logLine('　🌏 じしんが おきた！'); sBad();
+      shake();
+      if(st.support){ await say('🌏 じしんだ！ ぐらぐら…','🪵 しちゅうの おかげで だいじょうぶだった！'); }
+      else{ st.hp=clamp(st.hp-8,0,100); await say('🌏 じしんだ！ ぐらぐら…','😵 '+charName()+'は びっくりして ちょっと よわった…'); }
+      break;
+  }
+  render();
+}
+function shake(){
+  const el=$('#scene-wrap');
+  el.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(-4px)'},{transform:'translateX(0)'}],{duration:400});
+}
+function flash(){
+  const el=$('#scene-wrap');
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+
+/* ---------- 夕方：1日のまとめ ---------- */
+async function endOfDay(){
+  const msgs=[];
+  // 天気の水分変化
+  st.water = clamp(st.water - WX[st.weather].dry, 0, 100);
+  st.nutri = clamp(st.nutri - 7, 0, 100);
+  st.rainYesterday = (st.weather==='rain'||st.weather==='heavy'||st.weather==='typhoon');
+
+  // 台風の被害
+  if(st.weather==='typhoon'){
+    if(Math.random()<.45){
+      st.struck=true; st.weird=clamp(st.weird+20,0,100); st.growth+=12;
+      flash(); beep(120,.3,'sawtooth',.18);
+      msgs.push('⚡ ピカッ！！ かみなりが きゅうりの すぐそばに おちた！');
+      msgs.push('✨ …'+charName()+'が なんだか ひかってる…！？');
+      logLine('　⚡ かみなりが おちた！');
+    }
+    if(st.support){
+      st.hp-=5; st.survivedTyphoon=true;
+      msgs.push('🪵 しちゅうの おかげで 台風に たえきった！ えらい！');
+      logLine('　🌀 台風にたえた（しちゅう）');
+    }else{
+      st.hp-=26;
+      if(st.stage>=3 && Math.random()<.5) st.bent=true;
+      msgs.push('🌀 台風で つるが ぐちゃぐちゃに…！ かなり よわってしまった…');
+      logLine('　🌀 台風で大ダメージ！');
+      if(Math.random()<.18 && st.stage>=2){ st.hp=0; st.deadCause='typhoon'; }
+      else st.survivedTyphoon=true;
+    }
+    if(Math.random()<.25){
+      st.hp-=8;
+      msgs.push('🧊 ひょうまで ふってきた！ いたたた…！');
+      logLine('　🧊 ひょうがふった');
+    }
+  }
+
+  // 害虫・びょうき
+  if(st.pest){
+    const dmg = 8 + st.pestDays*5;
+    st.hp-=dmg; st.pestDays++;
+    msgs.push('🐛 虫に かじられている…！（げんきが '+dmg+' へった）');
+    if(st.pestDays>=3 && st.hp<=0) st.deadCause='pest';
+  }
+  if(st.disease){
+    st.hp-=8;
+    msgs.push('🍄 びょうきで どんどん よわっている…！');
+    if(st.hp<=0) st.deadCause='disease';
+  }
+
+  // 水分・えいよう
+  if(st.water<=12){ st.hp-=13; msgs.push('🏜️ のどが からから…！ 水が ほしいよ〜！'); if(st.hp<=0&&!st.deadCause) st.deadCause='drought'; }
+  if(st.water>=98){
+    st.rootrotDays++;
+    if(st.rootrotDays>=2){ st.hp-=14; msgs.push('💦 水が おおすぎて ねっこが くさりそう…！'); if(st.hp<=0&&!st.deadCause) st.deadCause='rootrot'; }
+  }else st.rootrotDays=0;
+  if(st.nutri<=8){ st.hp-=6; msgs.push('🍽️ おなかが ぺこぺこみたい…。ひりょうを あげよう。'); }
+
+  // かいふく
+  if(!st.pest && !st.disease && st.water>25 && st.water<95 && st.nutri>20){
+    st.hp=clamp(st.hp+5,0,100);
+  }
+  st.hp=clamp(st.hp,-10,100);
+
+  // 成長
+  if(st.stage<5){
+    let g=7;
+    if(st.water>=35&&st.water<=85) g*=1.3; else g*=0.75;
+    if(st.nutri>=45) g*=1.25; else if(st.nutri<20) g*=0.7;
+    if(st.hp>=70) g*=1.15; else if(st.hp<40) g*=0.75;
+    if(st.love>=40) g*=1.1;
+    if(st.pest) g*=0.5;
+    st.growth += Math.round(g);
+    // ステージアップ
+    while(st.stage<5 && st.growth>=STAGE_TH[st.stage]){
+      st.stage++;
+      sFanfa();
+      if(st.stage===1){
+        msgs.push('🌱 めが 出た！ ちいさな ふたばが かおを 出したよ！');
+        msgs.push(st.girl?'🎀 …あれ？ リボンが ついてる！ きゅうりちゃんだ！':'😊 元気な めだ！ きゅうりくんと なづけよう！');
+        logLine('　🌱 めが出た！');
+      }
+      else if(st.stage===2){ msgs.push('🌿 ふたばが りっぱな なえに なった！'); logLine('　🌿 なえになった'); }
+      else if(st.stage===3){ msgs.push('🌿 つるが ぐんぐん のびてきた！ そろそろ しちゅうが あると いいかも。'); logLine('　🌿 つるがのびた'); }
+      else if(st.stage===4){ msgs.push('🌼 きいろい 花が さいた！ きれいだなあ。'); logLine('　🌼 花がさいた！'); }
+      else if(st.stage===5){
+        st.len=4; st.wt=15;
+        msgs.push('🥒 やったー！ 花のねもとに ちいさな きゅうりが なった！');
+        msgs.push('（まてば 大きくなるよ。すきなときに 🥒しゅうかくボタンを おしてね！）');
+        logLine('　🥒 きゅうりがなった！');
+      }
+    }
+  }else{
+    // 実の成長
+    st.fruitDays++;
+    let q=0;
+    if(st.water>=35&&st.water<=90) q+=.4; else q+=.1;
+    if(st.nutri>=40) q+=.3; else q+=.1;
+    q+= st.hp/100*.3;
+    const gain = 2 + q*4.5;
+    st.len = +(st.len + gain).toFixed(1);
+    st.wt = Math.round(st.len * (3.5 + st.nutri/40 + st.water/60));
+    if(!st.yellow && (st.fruitDays>=7 || st.len>=42)){
+      st.yellow=true;
+      msgs.push('🟡 あれ…！？ きゅうりが 黄色く なってきた！ かんじゅくだ！');
+      msgs.push('（はやく しゅうかくしないと おちちゃうかも…！）');
+      logLine('　🟡 黄色くなってきた！');
+    }else if(st.yellow){
+      st.yellowDays++;
+      if(st.yellowDays>=2){
+        st.fell=true;
+        logLine('　🍂 じめんに おちた…');
+      }else{
+        msgs.push('🟡 きゅうりが ゆらゆら…。もう げんかいみたい！');
+      }
+    }else if(st.fruitDays>=2){
+      msgs.push('🥒 きゅうりが '+st.len+'cmに なった！ ずっしり してきたぞ。');
+    }
+  }
+
+  // カラスのしゅうげき（夕方）
+  if(st.crow){
+    if(st.net){
+      st.crow=false;
+      msgs.push('🐦‍⬛ カラスが きゅうりに とびかかった！ …が、ネットに はばまれて にげていった！');
+      logLine('　🥅 ネットがカラスをふせいだ！');
+    }else if(st.stage===5 && Math.random()<.6){
+      st.dead=true; st.deadCause='crow';
+    }else{
+      msgs.push('🐦‍⬛ カラスは まだ こちらを 見ている…。');
+    }
+  }
+
+  if(st.hp<=0){ st.dead=true; if(!st.deadCause) st.deadCause='wither'; }
+  st.hp=clamp(st.hp,0,100);
+  render();
+  if(msgs.length) await say(...msgs);
+
+  // 台風よほう
+  if(!st.dead && !st.forecastTyphoon && st.day>=4 && st.weather!=='typhoon' && Math.random()<.14){
+    st.forecastTyphoon=true;
+    renderTop();
+    await say('📺 てんきよほう「あすは 台風が くるでしょう」','⚠️ '+(st.support?'しちゅうが あるから あんしんだ！':'しちゅうを 立てておいたほうが よさそうだ…！'));
+    logLine('　📺 台風よほうが出た');
+  }
+}
+
+/* ---------- バッドエンド ---------- */
+const BAD_ENDS = {
+  wither:  {t:'かれてしまった…',   m:'おせわが たりなかったみたい。きゅうりは しおしおに かれてしまった…。'},
+  drought: {t:'からからに…',       m:'水が たりなくて、きゅうりは からからに かわいて しまった…。'},
+  rootrot: {t:'ねぐされ…',         m:'水の あげすぎで、ねっこが くさって しまった…。'},
+  pest:    {t:'虫に たべられた…',  m:'虫たちに ぜんぶ たべられて しまった…。はやく たいじ すればよかった…。'},
+  disease: {t:'びょうきに まけた…',m:'びょうきが ひどくなって、きゅうりは たおれて しまった…。'},
+  typhoon: {t:'台風に とばされた…',m:'ものすごい かぜで、きゅうりは どこかへ とんでいって しまった…。'},
+  crow:    {t:'カラスに ぬすまれた…',m:'カラスが きゅうりを くわえて とんでいった…。ネットを はって おけば…。'},
+};
+async function badEnd(){
+  st.dead=true;
+  render();
+  sBad();
+  const be = BAD_ENDS[st.deadCause]||BAD_ENDS.wither;
+  logLine(`💀 ${be.t}`);
+  await say('……', be.m);
+  // きろく
+  addHistory({
+    t:Date.now(), end:'bad', endType:st.deadCause, badTitle:be.t,
+    len:Math.round(st.len), wt:st.wt, score:0, days:st.day, girl:st.girl, log:st.log,
+  });
+  // 画面
+  $('#scr-result').classList.add('bad');
+  $('#bad-title').textContent='💀 '+be.t;
+  $('#result-char').innerHTML = charSVG({girl:st.girl, mood:'dead', h:120});
+  $('#r-emoji').textContent='🥀';
+  $('#r-name').textContent='バッドエンド';
+  $('#r-stars').textContent='';
+  $('#r-desc').textContent=be.m+' つぎは きっと うまくいくよ！';
+  $('#r-len').textContent = st.stage===5 ? Math.round(st.len)+'cm' : '--';
+  $('#r-wt').textContent = st.stage===5 ? st.wt+'g' : '--';
+  $('#r-days').textContent = st.day+'日';
+  $('#r-score').textContent = '0';
+  show('scr-result');
+  busy=false;
+}
+
+/* ---------- しゅうかく・けっか ---------- */
+function summary(){
+  return {
+    len:st.len, wt:st.wt, hp:st.hp, love:st.love, weird:st.weird,
+    yellow:st.yellow, bent:st.bent, fell:st.fell, struck:st.struck,
+    days:st.day, talk:st.talk, song:st.song, waterCnt:st.waterCnt,
+    weirdCnt:st.weirdCnt, pestsBeaten:st.pestsBeaten,
+    supportUsed:st.support, netUsed:st.net,
+    survivedTyphoon:st.survivedTyphoon, hotDays:st.hotDays, rainDays:st.rainDays,
+  };
+}
+function pickDish(s){
+  const matches = DISHES.filter(d=>{ try{ return d.c(s); }catch(e){ return false; } });
+  if(!matches.length) return DISHES.find(d=>d.id==='salad');
+  const maxp = Math.max(...matches.map(d=>d.p));
+  return pick(matches.filter(d=>d.p===maxp));
+}
+function calcScore(s, dish){
+  let sc = s.len*3 + s.wt*0.5 + s.love*1.2 + s.hp*1.2 + dish.r*30;
+  if(s.survivedTyphoon) sc+=25;
+  sc += s.pestsBeaten*12;
+  if(s.struck) sc+=15;
+  if(s.fell) sc*=0.6;
+  return Math.max(10, Math.round(sc));
+}
+async function finishHarvest(fell=false){
+  busy=true;
+  $('#harvest-row').classList.remove('show');
+  if(fell){
+    await say('🍂 ポトッ…！ かんじゅくしすぎた きゅうりが じめんに おちて しまった！','🫧 ひろいあげると… なんだか すごい においが する…。');
+  }else{
+    sFanfa();
+    logLine('　🧺 しゅうかくした！');
+    await say('🧺 ポキッ！ りっぱな きゅうりを しゅうかくした！','🍳 さっそく おりょうりに してみよう…！','🔪 トントントン… ジュージュー…','✨ できあがり！');
+  }
+  const s = summary();
+  const dish = pickDish(s);
+  const score = calcScore(s, dish);
+  // きろく
+  addHistory({
+    t:Date.now(), end:'ok', dishId:dish.id, dishName:dish.n, dishE:dish.e,
+    len:Math.round(s.len), wt:s.wt, score, days:st.day, girl:st.girl, log:st.log,
+  });
+  addDex(dish.id);
+  // けっか画面
+  $('#scr-result').classList.remove('bad');
+  $('#bad-title').textContent='';
+  $('#result-char').innerHTML = charSVG({girl:st.girl, mood:'happy', h:120});
+  $('#r-emoji').textContent = dish.e;
+  $('#r-name').textContent = dish.n;
+  $('#r-stars').textContent = '★'.repeat(dish.r)+'☆'.repeat(5-dish.r);
+  $('#r-desc').textContent = dish.d;
+  $('#r-len').textContent = Math.round(s.len)+'cm';
+  $('#r-wt').textContent = s.wt+'g';
+  $('#r-days').textContent = st.day+'日';
+  $('#r-score').textContent = score;
+  sFanfa();
+  show('scr-result');
+  busy=false;
+}
+
+/* ---------- メインループ ---------- */
+async function doCommand(id){
+  if(busy||!st||st.dead) return;
+  busy=true; render();
+  if(id==='harvest'){ await finishHarvest(false); return; }
+  await applyCmd(id);
+  if(st.hp<=0){ st.dead=true; if(!st.deadCause) st.deadCause='wither'; await badEnd(); return; }
+  await endOfDay();
+  if(st.dead){ await badEnd(); return; }
+  if(st.fell){ await finishHarvest(true); return; }
+  st.day++;
+  await morning();
+  busy=false; render();
+}
+async function startGame(){
+  st = newState();
+  busy=true;
+  show('scr-game');
+  logLine('1日目 ☀️はれ');
+  logLine('　🌰 たねをまいた');
+  render();
+  await say('🌰 はたけに きゅうりの たねを まいた！','まいにち 1かい おせわを えらんで、りっぱな きゅうりに そだてよう！','🍳 そだてかたで、できる りょうりが かわるよ。');
+  setPrompt('どうする？ したのボタンから 1つ えらんでね。');
+  busy=false; render();
+}
+
+/* ---------- きろく・ずかん ---------- */
+function getHistory(){ return loadJSON('kyuri_history',[]); }
+function addHistory(h){
+  const a=getHistory();
+  a.unshift(h);
+  if(a.length>60) a.length=60;
+  saveJSON('kyuri_history',a);
+}
+function getDex(){ return loadJSON('kyuri_dex',[]); }
+function addDex(id){
+  const a=getDex();
+  if(!a.includes(id)){ a.push(id); saveJSON('kyuri_dex',a); }
+}
+function fmtDate(t){
+  const d=new Date(t);
+  return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function renderHistory(){
+  const a=getHistory();
+  const el=$('#history-list');
+  if(!a.length){ el.innerHTML='<div class="empty">まだ きろくが ないよ。<br>きゅうりを そだてて みよう！</div>'; return; }
+  el.innerHTML=a.map((h,i)=>{
+    if(h.end==='ok'){
+      return `<div class="h-item" data-i="${i}">
+        <span class="he">${h.dishE}</span>
+        <span class="hmain">${h.dishName}<div class="hsub">${fmtDate(h.t)}・${h.days}日・${h.len}cm/${h.wt}g</div></span>
+        <span class="hscore">${h.score}点</span></div>`;
+    }
+    return `<div class="h-item bad" data-i="${i}">
+      <span class="he">🥀</span>
+      <span class="hmain">${h.badTitle||'かれてしまった…'}<div class="hsub">${fmtDate(h.t)}・${h.days}日</div></span>
+      <span class="hscore">--</span></div>`;
+  }).join('');
+}
+$('#history-list').addEventListener('click', e=>{
+  const it=e.target.closest('.h-item'); if(!it) return;
+  sTap();
+  const h=getHistory()[+it.dataset.i]; if(!h) return;
+  const head = h.end==='ok'
+    ? `<h3>${h.dishE} ${h.dishName}</h3><div style="font-weight:800">${h.score}点 / ${h.len}cm / ${h.wt}g / ${h.days}日</div>`
+    : `<h3>🥀 ${h.badTitle||'かれてしまった…'}</h3><div style="font-weight:800">${h.days}日目で おわかれ…</div>`;
+  $('#modal-body').innerHTML = head +
+    `<div style="margin-top:8px;font-size:12px;color:#888;font-weight:700">そだてた きろく：</div>` +
+    (h.log||[]).map(l=>`<div class="log-line">${l}</div>`).join('');
+  $('#modal').classList.add('on');
+});
+function renderDex(){
+  const dex=getDex();
+  $('#dex-title').textContent=`🍽️ りょうりずかん ${dex.length}/${DISHES.length}`;
+  $('#dex-grid').innerHTML = DISHES.map(d=>{
+    const got=dex.includes(d.id);
+    return `<div class="dex-cell ${got?'':'unknown'}">
+      <span class="de">${got?d.e:'❓'}</span>
+      <span class="dn">${got?d.n:'？？？'}</span></div>`;
+  }).join('');
+}
+
+/* ---------- 画面切替・ボタン ---------- */
+function show(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  $('#'+id).classList.add('on');
+  $('#btn-sound').style.display = (id==='scr-title')?'block':'none';
+  window.scrollTo(0,0);
+}
+$('#btn-start').onclick = ()=>{ sTap(); startGame(); };
+$('#btn-retry').onclick = ()=>{ sTap(); startGame(); };
+$('#btn-totitle').onclick = ()=>{ sTap(); show('scr-title'); };
+$('#btn-history').onclick = ()=>{ sTap(); renderHistory(); show('scr-history'); };
+$('#btn-dex').onclick = ()=>{ sTap(); renderDex(); show('scr-dex'); };
+document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{ sTap(); show('scr-title'); });
+$('#btn-howto').onclick = ()=>{
+  sTap();
+  $('#modal-body').innerHTML = `<h3>❓ あそびかた</h3>
+    <div style="line-height:1.9">
+    🌰 たねから きゅうりを そだてる ゲームだよ。<br>
+    👆 1日に 1かい、おせわを えらぼう。<br>
+    💧 水分や えいようが へると 元気が なくなるよ。<br>
+    🐛 虫や びょうきは はやめに たいじ！<br>
+    🌀 台風が くるまえに 🪵しちゅうを 立てよう。<br>
+    🐦‍⬛ カラスが きたら 🥅ネットで まもろう。<br>
+    🥒 きゅうりが なったら、すきなときに しゅうかく！<br>
+    　 まてば 大きくなるけど、まちすぎると…？<br>
+    🍳 そだてかたで ${DISHES.length}しゅるいの りょうりに へんしん！<br>
+    💀 元気が 0に なると かれちゃうよ…。</div>`;
+  $('#modal').classList.add('on');
+};
+$('#btn-quit').onclick = ()=>{
+  if(confirm('そだてるのを やめて タイトルに もどる？（きろくは のこらないよ）')){ st=null; busy=false; show('scr-title'); }
+};
+$('#modal-close').onclick = ()=>{ sTap(); $('#modal').classList.remove('on'); };
+$('#modal').addEventListener('click', e=>{ if(e.target.id==='modal') $('#modal').classList.remove('on'); });
+
+/* ---------- タイトル画面 ---------- */
+$('#title-chars').innerHTML = charSVG({girl:false,h:140}) + charSVG({girl:true,h:140});
+</script>
+</body>
+</html>
