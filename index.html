@@ -53,6 +53,7 @@ button:disabled{opacity:.4;}
 }
 .menu-btn.primary{background:#ffb83d;color:#5b3600;font-size:20px;}
 #btn-sound{position:fixed;top:10px;right:10px;width:44px;height:44px;font-size:20px;border-radius:50%;}
+#app-ver{font-size:11px;color:#6a8a5a;font-weight:700;margin-top:4px;}
 
 /* ===== game ===== */
 #g-top{
@@ -202,6 +203,7 @@ button:disabled{opacity:.4;}
     <button class="menu-btn" id="btn-history">📖 そだてたきろく</button>
     <button class="menu-btn" id="btn-dex">🍽️ りょうりずかん</button>
     <button class="menu-btn" id="btn-howto">❓ あそびかた</button>
+    <div id="app-ver"></div>
   </section>
   <button id="btn-sound">🔊</button>
 
@@ -274,6 +276,9 @@ button:disabled{opacity:.4;}
 /* =========================================================
    そだてて！きゅうりくん — 完全オフライン きゅうり育成ゲーム
    ========================================================= */
+const APP_VERSION = '1.0.0';   // 表示用バージョン
+const DATA_VERSION = 1;        // セーブデータ形式のバージョン
+
 const $ = s => document.querySelector(s);
 const R = (n) => Math.random()*n;
 const RI = (n) => Math.floor(Math.random()*n);
@@ -370,7 +375,7 @@ const DISHES = [
  {id:'dragon', n:'ドラゴンきゅうりのまるやき', e:'🐉', r:5, p:9, d:'りゅうのように大きい！ たべおわるのに 3日かかるらしい。',
    c:s=>s.len>=45},
  {id:'space', n:'うちゅうきゅうりグラタン', e:'🛸', r:5, p:9, d:'かみなりのパワーで うちゅうのあじがする。たまに ひかる。',
-   c:s=>s.struck&&s.weird>=40},
+   c:s=>s.struck&&s.weird>=55},
  {id:'golden', n:'おうごんきゅうりのてんぷら', e:'👑', r:5, p:9, d:'かんじゅくした黄色いきゅうりは、まるで金のかたまり！',
    c:s=>s.yellow&&s.love>=65&&s.hp>=75},
  // ---- とくべつ (p7) ----
@@ -523,7 +528,7 @@ const charName = ()=> st.girl?'きゅうりちゃん':'きゅうりくん';
 
 /* ---------- メッセージ ---------- */
 let msgResolve=null, msgTimer=null;
-function showMsg(text, ms=1300){
+function showMsg(text, ms=1500){
   return new Promise(res=>{
     msgResolve=res;
     const box=$('#msgbox');
@@ -924,8 +929,8 @@ async function endOfDay(){
 
   // 台風の被害
   if(st.weather==='typhoon'){
-    if(Math.random()<.45){
-      st.struck=true; st.weird=clamp(st.weird+20,0,100); st.growth+=12;
+    if(Math.random()<.25){
+      st.struck=true; st.weird=clamp(st.weird+12,0,100); st.growth+=12;
       flash(); beep(120,.3,'sawtooth',.18);
       msgs.push('⚡ ピカッ！！ かみなりが きゅうりの すぐそばに おちた！');
       msgs.push('✨ …'+charName()+'が なんだか ひかってる…！？');
@@ -1236,11 +1241,29 @@ function renderDex(){
   $('#dex-title').textContent=`🍽️ りょうりずかん ${dex.length}/${DISHES.length}`;
   $('#dex-grid').innerHTML = DISHES.map(d=>{
     const got=dex.includes(d.id);
-    return `<div class="dex-cell ${got?'':'unknown'}">
+    return `<div class="dex-cell ${got?'':'unknown'}" data-id="${d.id}">
       <span class="de">${got?d.e:'❓'}</span>
       <span class="dn">${got?d.n:'？？？'}</span></div>`;
   }).join('');
 }
+$('#dex-grid').addEventListener('click', e=>{
+  const cell=e.target.closest('.dex-cell'); if(!cell) return;
+  sTap();
+  const d=DISHES.find(x=>x.id===cell.dataset.id); if(!d) return;
+  const got=getDex().includes(d.id);
+  $('#modal-body').innerHTML = got
+    ? `<div style="text-align:center">
+        <div style="font-size:54px;line-height:1.3">${d.e}</div>
+        <h3 style="margin:4px 0 2px">${d.n}</h3>
+        <div style="color:#ffa000;letter-spacing:2px">${'★'.repeat(d.r)+'☆'.repeat(5-d.r)}</div>
+        <div style="margin-top:8px;color:#666;font-size:13px;line-height:1.7">${d.d}</div></div>`
+    : `<div style="text-align:center">
+        <div style="font-size:54px;line-height:1.3">❓</div>
+        <h3 style="margin:4px 0 2px">？？？</h3>
+        <div style="color:#ffa000;letter-spacing:2px">${'★'.repeat(d.r)+'☆'.repeat(5-d.r)}</div>
+        <div style="margin-top:8px;color:#666;font-size:13px;line-height:1.7">まだ 見つけていない りょうり。<br>いろんな そだてかたを ためしてみよう！</div></div>`;
+  $('#modal').classList.add('on');
+});
 
 /* ---------- 画面切替・ボタン ---------- */
 function show(id){
@@ -1277,7 +1300,38 @@ $('#btn-quit').onclick = ()=>{
 $('#modal-close').onclick = ()=>{ sTap(); $('#modal').classList.remove('on'); };
 $('#modal').addEventListener('click', e=>{ if(e.target.id==='modal') $('#modal').classList.remove('on'); });
 
+/* ---------- 起動時チェック ---------- */
+function checkSaveData(){
+  const ver = loadJSON('kyuri_ver', null);
+
+  // 履歴：形式のおかしいエントリを取りのぞく
+  let hist = loadJSON('kyuri_history', []);
+  if(!Array.isArray(hist)) hist = [];
+  const cleaned = hist.filter(h =>
+    h && typeof h==='object' &&
+    typeof h.t==='number' &&
+    (h.end==='ok' || h.end==='bad') &&
+    typeof h.days==='number'
+  );
+  if(cleaned.length !== hist.length) saveJSON('kyuri_history', cleaned);
+
+  // ずかん：存在しない料理IDを取りのぞく
+  let dex = loadJSON('kyuri_dex', []);
+  if(!Array.isArray(dex)) dex = [];
+  const validDex = dex.filter(id => DISHES.some(d => d.id===id));
+  if(validDex.length !== dex.length) saveJSON('kyuri_dex', validDex);
+
+  // データ形式が変わったときのマイグレーションはここに追加する
+  if(!ver || ver.data !== DATA_VERSION){
+    saveJSON('kyuri_ver', {app:APP_VERSION, data:DATA_VERSION});
+  }else if(ver.app !== APP_VERSION){
+    saveJSON('kyuri_ver', {app:APP_VERSION, data:DATA_VERSION});
+  }
+}
+
 /* ---------- タイトル画面 ---------- */
+checkSaveData();
+$('#app-ver').textContent = 'v' + APP_VERSION;
 $('#title-chars').innerHTML = charSVG({girl:false,h:140}) + charSVG({girl:true,h:140});
 </script>
 </body>
